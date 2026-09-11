@@ -125,12 +125,17 @@ def cleanup_generated_purchase_documents(logged_in_to_erp):
             remove_generated_document(headers, order, "采购订单")
 
 
+@pytest.mark.erp
 @allure.feature("ERP 采购业务")
 class TestPurchaseOrder:
+    @pytest.mark.smoke
+    @pytest.mark.p0
     @allure.story("登录")
     def test_erp_login(self, logged_in_to_erp):
         assert logged_in_to_erp is None
 
+    @pytest.mark.smoke
+    @pytest.mark.p1
     @allure.story("采购订单查询")
     @pytest.mark.parametrize(
         "base_info,testcase",
@@ -142,6 +147,8 @@ class TestPurchaseOrder:
         allure.dynamic.title(testcase["case_name"])
         RequestBase().specification_yaml(base_info, testcase)
 
+    @pytest.mark.regression
+    @pytest.mark.p0
     @allure.story("采购订单完整生命周期")
     def test_purchase_order_lifecycle(self, cleanup_generated_purchase_documents):
         steps = [
@@ -157,6 +164,9 @@ class TestPurchaseOrder:
             with allure.step(title):
                 run_yaml_case(f"./erp_tests/data/{file_name}", is_write)
 
+    @pytest.mark.regression
+    @pytest.mark.inventory
+    @pytest.mark.p0
     @allure.story("采购入库库存校验")
     def test_purchase_receipt_increases_stock(
         self, cleanup_generated_purchase_documents
@@ -208,6 +218,9 @@ class TestPurchaseOrder:
             )))
             assert stock_restored == stock_before
 
+    @pytest.mark.regression
+    @pytest.mark.negative
+    @pytest.mark.p1
     @allure.story("采购业务异常规则")
     def test_purchase_order_rejects_invalid_operations(
         self, cleanup_generated_purchase_documents

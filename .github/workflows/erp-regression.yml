@@ -2,6 +2,18 @@ name: ERP Regression
 
 on:
   workflow_dispatch:
+    inputs:
+      suite:
+        description: ERP test suite to run
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - smoke
+          - regression
+          - negative
+          - inventory
 
 permissions:
   contents: read
@@ -45,10 +57,20 @@ jobs:
             throw "ERP service is not listening on 127.0.0.1:9999"
           }
 
-      - name: Run ERP regression
+      - name: Run all ERP tests
+        if: inputs.suite == 'all'
         run: >-
           uv run --frozen --no-sync pytest -q
           ./erp_tests
+          --alluredir=./report/ci-erp-allure-results
+          --clean-alluredir
+
+      - name: Run selected ERP tests
+        if: inputs.suite != 'all'
+        run: >-
+          uv run --frozen --no-sync pytest -q
+          ./erp_tests
+          -m "${{ inputs.suite }}"
           --alluredir=./report/ci-erp-allure-results
           --clean-alluredir
 
@@ -56,7 +78,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: erp-regression-${{ github.run_number }}
+          name: erp-${{ inputs.suite }}-${{ github.run_number }}
           path: report/ci-erp-allure-results
           if-no-files-found: warn
           retention-days: 14
