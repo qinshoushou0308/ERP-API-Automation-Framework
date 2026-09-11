@@ -11,3 +11,14 @@
       validation:
         - contains: { 'msg': '查询成功' }
         - eq: { 'msg_code': 200 }
+    - case_name: 查询不存在的用户
+      data:
+        user_id: 999999999999999
+      validation:
+        - contains: { 'msg': '用户id不存在' }
+        - eq: { 'msg_code': 9001 }
+    - case_name: 查询用户时不传用户ID
+      data: {}
+      validation:
+        - contains: { 'msg': '用户id不存在' }
+        - eq: { 'msg_code': 9001 }

@@ -185,7 +185,8 @@ def add_user():
     phone = flask.request.form.get('phone')
     token = flask.request.form.get('token')
     if all([username, password, role_id, dates, phone]) and token == get_token['token']:
-        with open('../data/mockdata/userManage.json', 'a', encoding='utf-8') as f:
+        user_data_path = os.path.join(DIR_BASE, 'data', 'mockdata', 'userManage.json')
+        with open(user_data_path, 'a', encoding='utf-8') as f:
             add_user_info = {
                 'id': ''.join([random.choice(string.digits) for i in range(11)]),
                 'username': username,

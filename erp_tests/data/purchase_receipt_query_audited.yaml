@@ -1,0 +1,17 @@
+- baseInfo:
+    api_name: ERP 查询已审核采购入库单
+    environment: erp_envi
+    url: /depotHead/list
+    method: GET
+    header:
+      X-Access-Token: ${get_extract_data(erp_access_token)}
+  testCase:
+    - case_name: 采购入库单审核状态正确
+      params:
+        search: '{"type":"入库","subType":"采购","number":"CGRK${get_extract_data(erp_receipt_suffix)}"}'
+        currentPage: 1
+        pageSize: 10
+      validation:
+        - eq: { 'code': 200 }
+        - contains: { 'number': 'CGRK${get_extract_data(erp_receipt_suffix)}' }
+        - contains: { 'status': '1' }

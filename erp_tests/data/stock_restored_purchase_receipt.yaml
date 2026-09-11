@@ -1,0 +1,20 @@
+- baseInfo:
+    api_name: ERP 查询清理后的库存
+    environment: erp_envi
+    url: /material/getListWithStock
+    method: GET
+    header:
+      X-Access-Token: ${get_extract_data(erp_access_token)}
+  testCase:
+    - case_name: 清理采购入库单后库存恢复
+      params:
+        currentPage: 1
+        pageSize: 10
+        depotIds: 14
+        materialParam: '1001'
+        zeroStock: 0
+      validation:
+        - eq: { 'code': 200 }
+        - contains: { 'mBarCode': '1001' }
+      extract:
+        erp_stock_after_cleanup: $.data.rows[0].currentStock

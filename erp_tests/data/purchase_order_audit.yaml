@@ -1,0 +1,15 @@
+- baseInfo:
+    api_name: ERP 审核采购订单
+    environment: erp_envi
+    url: /depotHead/batchSetStatus
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(erp_access_token)}
+  testCase:
+    - case_name: 将采购订单状态改为已审核
+      json:
+        status: '1'
+        ids: ${get_extract_data(erp_purchase_order_id)}
+      validation:
+        - eq: { 'code': 200 }

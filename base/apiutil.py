@@ -22,6 +22,10 @@ class RequestBase:
         self.read = ReadYamlData()
         self.asserts = Assertions()
 
+    def get_url_host(self, base_info):
+        environment = base_info.get('environment', 'api_envi')
+        return self.conf.get_section_for_data(environment, 'host')
+
     def replace_load(self, data):
         """yaml数据替换解析"""
         str_data = data
@@ -61,7 +65,7 @@ class RequestBase:
         """
         try:
             params_type = ['data', 'json', 'params']
-            url_host = self.conf.get_section_for_data('api_envi', 'host')
+            url_host = self.get_url_host(base_info)
             api_name = base_info['api_name']
             allure.attach(api_name, f'接口名称：{api_name}', allure.attachment_type.TEXT)
             url = url_host + base_info['url']

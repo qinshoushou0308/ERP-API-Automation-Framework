@@ -1,0 +1,16 @@
+- baseInfo:
+    api_name: ERP 拒绝超量采购入库
+    environment: erp_envi
+    url: /depotHead/addDepotHeadAndDetail
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(erp_access_token)}
+  testCase:
+    - case_name: 采购一件时不能入库两件
+      json:
+        info: '{"organId":57,"operTime":"${end_year_time()}","number":"CGRK${get_extract_data(erp_receipt_suffix)}","type":"入库","subType":"采购","totalPrice":-22,"changeAmount":-22,"accountId":17,"accountIdList":"","accountMoneyList":"","fileName":"","status":"0","discount":0,"discountMoney":0,"discountLastMoney":22,"otherMoney":0,"deposit":0,"debt":0,"linkNumber":"${get_extract_data(erp_purchase_order_number)}","remark":"API_AUTOMATION_TEST"}'
+        rows: '[{"barCode":"1001","unit":"个","preNumber":1,"finishNumber":0,"operNumber":2,"unitPrice":11,"allPrice":22,"taxRate":0,"taxMoney":0,"taxLastMoney":22,"depotId":14,"linkId":${get_extract_data(erp_purchase_order_item_id)},"remark":"API_AUTOMATION_TEST"}]'
+      validation:
+        - eq: { 'code': 85000014 }
+        - contains: { 'message': '数量需要修改' }

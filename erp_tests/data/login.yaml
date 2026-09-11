@@ -1,0 +1,19 @@
+- baseInfo:
+    api_name: ERP 用户登录
+    environment: erp_envi
+    url: /user/login
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+  testCase:
+    - case_name: ERP 默认管理员登录成功
+      json:
+        loginName: jsh
+        password: ${md5_encryption(123456)}
+        code: ''
+        uuid: ''
+      validation:
+        - eq: { 'code': 200 }
+        - contains: { 'msgTip': 'user can login' }
+      extract:
+        erp_access_token: $.data.token

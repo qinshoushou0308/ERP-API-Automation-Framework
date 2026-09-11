@@ -124,3 +124,7 @@
 
 **本文档仅为星球内部专享，大家可以加入[知识星球](https://www.programmercarl.com/other/kstar.html)里获取，在星球置顶一**。
 
+## 持续集成
+
+项目已配置 GitHub Actions：框架与 Mock 接口回归可在云端自动执行；依赖本机服务和数据库的 ERP 回归使用 Windows self-hosted runner。配置说明见 [docs/ci.md](docs/ci.md)。
+

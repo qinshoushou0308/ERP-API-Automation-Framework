@@ -1,0 +1,18 @@
+- baseInfo:
+    api_name: ERP 查询采购订单明细
+    environment: erp_envi
+    url: /depotItem/getDetailList
+    method: GET
+    header:
+      X-Access-Token: ${get_extract_data(erp_access_token)}
+  testCase:
+    - case_name: 获取采购订单商品明细和关联ID
+      params:
+        headerId: ${get_extract_data(erp_purchase_order_id)}
+        mpList: ''
+        linkType: basic
+      validation:
+        - eq: { 'code': 200 }
+        - contains: { 'barCode': '1001' }
+      extract:
+        erp_purchase_order_item_id: $.data.rows[0].id

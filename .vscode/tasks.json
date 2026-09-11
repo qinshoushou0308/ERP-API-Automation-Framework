@@ -1,0 +1,99 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Environment: Sync",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Environment: Sync Framework",
+        "Environment: Sync Mock"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Environment: Sync Framework",
+      "type": "process",
+      "command": "${env:USERPROFILE}\\.local\\bin\\uv.exe",
+      "args": [
+        "sync",
+        "--frozen"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Environment: Sync Mock",
+      "type": "process",
+      "command": "${env:USERPROFILE}\\.local\\bin\\uv.exe",
+      "args": [
+        "sync",
+        "--frozen"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}\\mock_server\\api_server"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Mock: Start",
+      "type": "process",
+      "command": "${env:USERPROFILE}\\.local\\bin\\uv.exe",
+      "args": [
+        "run",
+        "--frozen",
+        "--no-sync",
+        "base/flask_service.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}\\mock_server\\api_server"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Tests: Run All",
+      "type": "process",
+      "command": "${env:USERPROFILE}\\.local\\bin\\uv.exe",
+      "args": [
+        "run",
+        "--frozen",
+        "--no-sync",
+        "pytest",
+        "-q",
+        "./testcase"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": "$python"
+    },
+    {
+      "label": "ERP: Run Purchase Tests",
+      "type": "process",
+      "command": "${env:USERPROFILE}\\.local\\bin\\uv.exe",
+      "args": [
+        "run",
+        "--frozen",
+        "--no-sync",
+        "pytest",
+        "-q",
+        "./erp_tests"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": "$python"
+    }
+  ]
+}

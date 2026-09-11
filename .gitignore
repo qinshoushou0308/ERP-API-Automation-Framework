@@ -1,6 +1,15 @@
 
 *.pyc
 /common/__pycache__
+**/__pycache__/
 /.idea
 *.pyc
+/extract.yaml
 /report/temp
+/report/ci-*
+/report/local-ci-*
+mock-server.log
+/.venv
+/mock_server/api_server/.venv
+/.pytest_cache
+/logs

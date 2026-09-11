@@ -1,0 +1,58 @@
+name: ERP Regression
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erp-regression
+  cancel-in-progress: false
+
+jobs:
+  purchase-flow:
+    name: Purchase and inventory regression
+    runs-on: [self-hosted, Windows, X64, erp-local]
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Check local ERP service
+        shell: pwsh
+        run: |
+          $connection = Test-NetConnection 127.0.0.1 -Port 9999 -WarningAction SilentlyContinue
+          if (-not $connection.TcpTestSucceeded) {
+            throw "ERP service is not listening on 127.0.0.1:9999"
+          }
+
+      - name: Run ERP regression
+        run: >-
+          uv run --frozen --no-sync pytest -q
+          ./erp_tests
+          --alluredir=./report/ci-erp-allure-results
+          --clean-alluredir
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: erp-regression-${{ github.run_number }}
+          path: report/ci-erp-allure-results
+          if-no-files-found: warn
+          retention-days: 14

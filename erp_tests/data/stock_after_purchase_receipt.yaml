@@ -1,0 +1,20 @@
+- baseInfo:
+    api_name: ERP 查询采购入库后库存
+    environment: erp_envi
+    url: /material/getListWithStock
+    method: GET
+    header:
+      X-Access-Token: ${get_extract_data(erp_access_token)}
+  testCase:
+    - case_name: 查询仓库1中商品1001的入库后库存
+      params:
+        currentPage: 1
+        pageSize: 10
+        depotIds: 14
+        materialParam: '1001'
+        zeroStock: 0
+      validation:
+        - eq: { 'code': 200 }
+        - contains: { 'mBarCode': '1001' }
+      extract:
+        erp_stock_after_receipt: $.data.rows[0].currentStock

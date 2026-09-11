@@ -1,0 +1,14 @@
+- baseInfo:
+    api_name: ERP 生成采购入库单号
+    environment: erp_envi
+    url: /sequence/buildNumber
+    method: GET
+    header:
+      X-Access-Token: ${get_extract_data(erp_access_token)}
+  testCase:
+    - case_name: 生成唯一采购入库单号
+      params: {}
+      validation:
+        - eq: { 'code': 200 }
+      extract:
+        erp_receipt_suffix: $.data.defaultNumber

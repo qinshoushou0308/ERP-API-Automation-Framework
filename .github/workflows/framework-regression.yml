@@ -1,0 +1,74 @@
+name: Framework Regression
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: framework-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mock-regression:
+    name: Mock API regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Install Python runtimes
+        run: uv python install 3.12 3.13
+
+      - name: Install framework dependencies
+        run: uv sync --frozen
+
+      - name: Install Mock service dependencies
+        run: uv sync --project mock_server/api_server --frozen
+
+      - name: Start Mock service
+        working-directory: mock_server/api_server
+        run: |
+          uv run --frozen --no-sync python base/flask_service.py > "$GITHUB_WORKSPACE/mock-server.log" 2>&1 &
+
+      - name: Wait for Mock service
+        shell: bash
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8787/index > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat mock-server.log
+          exit 1
+
+      - name: Run framework regression
+        run: >-
+          uv run --frozen --no-sync pytest -q
+          ./tests/unit ./testcase
+          --alluredir=./report/ci-allure-results
+          --clean-alluredir
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: framework-regression-${{ github.run_number }}
+          path: |
+            report/ci-allure-results
+            mock-server.log
+          if-no-files-found: warn
+          retention-days: 14

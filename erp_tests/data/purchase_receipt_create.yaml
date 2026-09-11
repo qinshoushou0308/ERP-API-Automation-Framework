@@ -1,0 +1,15 @@
+- baseInfo:
+    api_name: ERP 新增关联采购入库单
+    environment: erp_envi
+    url: /depotHead/addDepotHeadAndDetail
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(erp_access_token)}
+  testCase:
+    - case_name: 将采购订单中的一件商品入库到仓库1
+      json:
+        info: '{"organId":57,"operTime":"${end_year_time()}","number":"CGRK${get_extract_data(erp_receipt_suffix)}","type":"入库","subType":"采购","totalPrice":-11,"changeAmount":-11,"accountId":17,"accountIdList":"","accountMoneyList":"","fileName":"","status":"0","discount":0,"discountMoney":0,"discountLastMoney":11,"otherMoney":0,"deposit":0,"debt":0,"linkNumber":"${get_extract_data(erp_purchase_order_number)}","remark":"API_AUTOMATION_TEST"}'
+        rows: '[{"barCode":"1001","unit":"个","operNumber":1,"unitPrice":11,"allPrice":11,"taxRate":0,"taxMoney":0,"taxLastMoney":11,"depotId":14,"linkId":${get_extract_data(erp_purchase_order_item_id)},"remark":"API_AUTOMATION_TEST"}]'
+      validation:
+        - eq: { 'code': 200 }

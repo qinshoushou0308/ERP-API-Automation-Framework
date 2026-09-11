@@ -1,0 +1,14 @@
+- baseInfo:
+    api_name: ERP 拒绝删除已审核采购订单
+    environment: erp_envi
+    url: /depotHead/delete
+    method: DELETE
+    header:
+      X-Access-Token: ${get_extract_data(erp_access_token)}
+  testCase:
+    - case_name: 已审核采购订单不能直接删除
+      params:
+        id: ${get_extract_data(erp_purchase_order_id)}
+      validation:
+        - eq: { 'code': 8500011 }
+        - contains: { 'message': '只有未审核的单据才能删除' }

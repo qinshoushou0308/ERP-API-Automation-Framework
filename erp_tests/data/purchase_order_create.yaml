@@ -1,0 +1,15 @@
+- baseInfo:
+    api_name: ERP 新增采购订单
+    environment: erp_envi
+    url: /depotHead/addDepotHeadAndDetail
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(erp_access_token)}
+  testCase:
+    - case_name: 新增一件商品的采购订单
+      json:
+        info: '{"organId":57,"operTime":"${end_year_time()}","number":"CGDD${get_extract_data(erp_order_suffix)}","type":"其它","subType":"采购订单","totalPrice":-11,"changeAmount":0,"accountId":"","accountIdList":"","accountMoneyList":"","fileName":"","status":"0","discount":0,"discountMoney":0,"discountLastMoney":11,"remark":"API_AUTOMATION_TEST"}'
+        rows: '[{"barCode":"1001","unit":"个","operNumber":1,"unitPrice":11,"allPrice":11,"taxRate":0,"taxMoney":0,"taxLastMoney":11,"depotId":"","remark":"API_AUTOMATION_TEST"}]'
+      validation:
+        - eq: { 'code': 200 }

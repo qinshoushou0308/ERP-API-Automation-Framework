@@ -1,0 +1,16 @@
+- baseInfo:
+    api_name: ERP 拒绝重复审核采购订单
+    environment: erp_envi
+    url: /depotHead/batchSetStatus
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(erp_access_token)}
+  testCase:
+    - case_name: 已审核采购订单不能再次审核
+      json:
+        status: '1'
+        ids: ${get_extract_data(erp_purchase_order_id)}
+      validation:
+        - eq: { 'code': 8500012 }
+        - contains: { 'message': '只有未审核的单据才能审核' }
