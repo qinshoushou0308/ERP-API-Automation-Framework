@@ -44,20 +44,33 @@ class TestCiReportingConfig(unittest.TestCase):
         self.assertIn("report/allure-report", generate.replace("\\", "/"))
 
     def test_successful_report_is_published_to_github_pages(self):
-        upload = self.require_step("Upload GitHub Pages artifact")
-        self.assertTrue(upload["uses"].startswith(
-            "actions/upload-pages-artifact@"
-        ))
-        self.assertEqual("report/allure-report", upload["with"]["path"])
+        self.assertNotIn("Upload GitHub Pages artifact", self.steps)
 
         self.assertIn("deploy-report", self.workflow["jobs"])
         deploy_job = self.workflow["jobs"]["deploy-report"]
+        deploy_steps = {
+            step["name"]: step
+            for step in deploy_job["steps"]
+            if "name" in step
+        }
+
+        download = deploy_steps["Download Allure report"]
+        self.assertTrue(download["uses"].startswith(
+            "actions/download-artifact@"
+        ))
+
+        upload = deploy_steps["Upload GitHub Pages artifact"]
+        self.assertTrue(upload["uses"].startswith(
+            "actions/upload-pages-artifact@"
+        ))
+        self.assertEqual(
+            "report-bundle/allure-report", upload["with"]["path"]
+        )
+
         self.assertEqual("purchase-flow", deploy_job["needs"])
         self.assertEqual("write", deploy_job["permissions"]["pages"])
         self.assertEqual("write", deploy_job["permissions"]["id-token"])
-        deploy_step = next(
-            step for step in deploy_job["steps"] if step.get("id") == "deployment"
-        )
+        deploy_step = next(step for step in deploy_job["steps"] if step.get("id") == "deployment")
         self.assertTrue(deploy_step["uses"].startswith("actions/deploy-pages@"))
 
     def test_failure_creates_issue_and_keeps_job_failed(self):
