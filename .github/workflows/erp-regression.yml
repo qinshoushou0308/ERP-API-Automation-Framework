@@ -27,8 +27,12 @@ jobs:
     name: Purchase and inventory regression
     runs-on: [self-hosted, Windows, X64, erp-local]
     timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write # Creates a diagnostic issue only when this job fails.
     env:
       UV_NO_MANAGED_PYTHON: "1"
+      ALLURE_REPORT_URL: https://qinshoushou0308.github.io/ERP-API-Automation-Framework/
 
     steps:
       - name: Check out repository
@@ -41,6 +45,17 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+
       - name: Install uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
@@ -48,6 +63,34 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --frozen
+
+      - name: Reset Allure workspace
+        shell: pwsh
+        run: |
+          $workspace = [IO.Path]::GetFullPath($env:GITHUB_WORKSPACE)
+          $targets = @(
+            "report/allure-history",
+            "report/allure-report",
+            "report/ci-erp-allure-results"
+          )
+          foreach ($target in $targets) {
+            $resolved = [IO.Path]::GetFullPath((Join-Path $workspace $target))
+            $prefix = $workspace + [IO.Path]::DirectorySeparatorChar
+            if (-not $resolved.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+              throw "Refusing to remove path outside workspace: $resolved"
+            }
+            if (Test-Path -LiteralPath $resolved) {
+              Remove-Item -LiteralPath $resolved -Recurse -Force
+            }
+          }
+
+      - name: Restore Allure history
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: report/allure-history
+          key: erp-allure-history-${{ inputs.suite }}-${{ github.run_id }}
+          restore-keys: |
+            erp-allure-history-${{ inputs.suite }}-
 
       - name: Check local ERP service
         shell: pwsh
@@ -58,7 +101,9 @@ jobs:
           }
 
       - name: Run all ERP tests
+        id: run-all
         if: inputs.suite == 'all'
+        continue-on-error: true
         run: >-
           uv run --frozen --no-sync pytest -q
           ./erp_tests
@@ -66,19 +111,179 @@ jobs:
           --clean-alluredir
 
       - name: Run selected ERP tests
+        id: run-selected
         if: inputs.suite != 'all'
+        continue-on-error: true
+        env:
+          TEST_SUITE: ${{ inputs.suite }}
         run: >-
           uv run --frozen --no-sync pytest -q
           ./erp_tests
-          -m "${{ inputs.suite }}"
+          -m "$env:TEST_SUITE"
           --alluredir=./report/ci-erp-allure-results
           --clean-alluredir
+
+      - name: Prepare Allure metadata
+        if: always()
+        shell: pwsh
+        env:
+          TEST_SUITE: ${{ inputs.suite }}
+        run: |
+          $results = Join-Path $env:GITHUB_WORKSPACE "report/ci-erp-allure-results"
+          New-Item -ItemType Directory -Path $results -Force | Out-Null
+
+          $history = Join-Path $env:GITHUB_WORKSPACE "report/allure-history"
+          if (Test-Path -LiteralPath $history) {
+            $resultHistory = Join-Path $results "history"
+            New-Item -ItemType Directory -Path $resultHistory -Force | Out-Null
+            Get-ChildItem -LiteralPath $history | Copy-Item -Destination $resultHistory -Recurse -Force
+          }
+
+          $runUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          $executor = @{
+            name = "GitHub Actions"
+            type = "github"
+            buildName = "ERP $env:TEST_SUITE #$env:GITHUB_RUN_NUMBER"
+            buildOrder = [int]$env:GITHUB_RUN_NUMBER
+            buildUrl = $runUrl
+            reportName = "ERP API Automation - $env:TEST_SUITE"
+            reportUrl = $env:ALLURE_REPORT_URL
+          }
+          $executor | ConvertTo-Json | Set-Content -Path (Join-Path $results "executor.json") -Encoding utf8
+
+          @(
+            "Environment=Local ERP"
+            "Test suite=$env:TEST_SUITE"
+            "Python=3.12"
+            "Runner=Windows self-hosted"
+          ) | Set-Content -Path (Join-Path $results "environment.properties") -Encoding utf8
+
+      - name: Generate Allure report
+        if: always()
+        shell: pwsh
+        run: >-
+          npx --yes allure-commandline@2.43.0 generate
+          ./report/ci-erp-allure-results
+          --clean
+          --output ./report/allure-report
+
+      - name: Save generated history
+        if: always()
+        shell: pwsh
+        run: |
+          $source = Join-Path $env:GITHUB_WORKSPACE "report/allure-report/history"
+          if (-not (Test-Path -LiteralPath $source)) {
+            throw "Allure history was not generated"
+          }
+          $target = Join-Path $env:GITHUB_WORKSPACE "report/allure-history"
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          Get-ChildItem -LiteralPath $source | Copy-Item -Destination $target -Recurse -Force
+
+      - name: Save Allure history
+        if: always() && hashFiles('report/allure-history/**') != ''
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: report/allure-history
+          key: erp-allure-history-${{ inputs.suite }}-${{ github.run_id }}
 
       - name: Upload test evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: erp-${{ inputs.suite }}-${{ github.run_number }}
-          path: report/ci-erp-allure-results
+          name: erp-allure-${{ inputs.suite }}-${{ github.run_number }}
+          path: |
+            report/ci-erp-allure-results
+            report/allure-report
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Upload GitHub Pages artifact
+        if: >-
+          success() &&
+          steps.run-all.outcome != 'failure' &&
+          steps.run-selected.outcome != 'failure'
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: report/allure-report
+
+      - name: Write workflow summary
+        if: always()
+        shell: pwsh
+        env:
+          TEST_SUITE: ${{ inputs.suite }}
+          RUN_ALL_OUTCOME: ${{ steps.run-all.outcome }}
+          RUN_SELECTED_OUTCOME: ${{ steps.run-selected.outcome }}
+        run: |
+          $testFailed = $env:RUN_ALL_OUTCOME -eq "failure" -or $env:RUN_SELECTED_OUTCOME -eq "failure"
+          $status = if ($testFailed) { "Failed" } else { "Passed" }
+          @"
+          ## ERP API regression
+
+          - Suite: ``$env:TEST_SUITE``
+          - Result: **$status**
+          - Allure report: [$env:ALLURE_REPORT_URL]($env:ALLURE_REPORT_URL)
+          - Run: [$env:GITHUB_RUN_NUMBER]($env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID)
+          "@ | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
+
+      - name: Create failure issue
+        if: >-
+          always() &&
+          (failure() ||
+          steps.run-all.outcome == 'failure' ||
+          steps.run-selected.outcome == 'failure')
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TEST_SUITE: ${{ inputs.suite }}
+        run: |
+          $headers = @{
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            Accept = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
+          }
+          $runUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          $body = @"
+          The ERP API automation workflow failed.
+
+          - Suite: ``$env:TEST_SUITE``
+          - Commit: ``$env:GITHUB_SHA``
+          - Run: $runUrl
+          - Report artifact: ``erp-allure-$env:TEST_SUITE-$env:GITHUB_RUN_NUMBER``
+
+          Open the run link to inspect the failed step and download the Allure report artifact.
+          "@
+          $payload = @{
+            title = "[CI] ERP regression failed: $env:TEST_SUITE (#$env:GITHUB_RUN_NUMBER)"
+            body = $body
+          } | ConvertTo-Json
+          Invoke-RestMethod `
+            -Method Post `
+            -Uri "https://api.github.com/repos/$env:GITHUB_REPOSITORY/issues" `
+            -Headers $headers `
+            -ContentType "application/json" `
+            -Body $payload
+
+      - name: Keep ERP test failure status
+        if: >-
+          always() &&
+          (steps.run-all.outcome == 'failure' ||
+          steps.run-selected.outcome == 'failure')
+        shell: pwsh
+        run: throw "ERP tests failed. See the Allure artifact and failure issue."
+
+  deploy-report:
+    name: Publish Allure report
+    needs: purchase-flow
+    if: needs.purchase-flow.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write # Publishes the generated report to GitHub Pages.
+      id-token: write # Authenticates the Pages deployment.
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy Allure report
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

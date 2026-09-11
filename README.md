@@ -126,5 +126,8 @@
 
 ## 持续集成
 
-项目已配置 GitHub Actions：框架与 Mock 接口回归可在云端自动执行；依赖本机服务和数据库的 ERP 回归使用 Windows self-hosted runner。配置说明见 [docs/ci.md](docs/ci.md)。
+项目已配置 GitHub Actions：框架与 Mock 接口回归可在云端自动执行；依赖本机服务和数据库的 ERP 回归使用 Windows self-hosted runner。ERP 测试支持按标签选择执行、Allure 历史趋势报告和失败 Issue 通知。
+
+- [查看 ERP Allure 在线报告](https://qinshoushou0308.github.io/ERP-API-Automation-Framework/)
+- [查看持续集成配置说明](docs/ci.md)
 

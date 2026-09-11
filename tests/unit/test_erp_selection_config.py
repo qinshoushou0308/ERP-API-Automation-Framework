@@ -94,7 +94,11 @@ class TestErpSelectionConfig(unittest.TestCase):
         run_steps = {step["name"]: step for step in steps if "run" in step}
         self.assertIn("Run all ERP tests", run_steps)
         self.assertIn("Run selected ERP tests", run_steps)
-        self.assertIn("-m \"${{ inputs.suite }}\"", run_steps["Run selected ERP tests"]["run"])
+        selected = run_steps["Run selected ERP tests"]
+        self.assertIn("env", selected)
+        self.assertEqual("${{ inputs.suite }}", selected["env"]["TEST_SUITE"])
+        self.assertIn('-m "$env:TEST_SUITE"', selected["run"])
+        self.assertNotIn("${{ inputs.suite }}", selected["run"])
 
 
 if __name__ == "__main__":

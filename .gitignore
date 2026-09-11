@@ -8,6 +8,8 @@
 /report/temp
 /report/ci-*
 /report/local-ci-*
+/report/allure-report
+/report/allure-history
 mock-server.log
 /.venv
 /mock_server/api_server/.venv
